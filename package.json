@@ -1,0 +1,19 @@
+{
+  "name": "naturalist-indexer-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "REST API and MCP server backed by the iNaturalist API",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "express": "^5.1.0",
+    "zod": "^4.1.12"
+  }
+}
