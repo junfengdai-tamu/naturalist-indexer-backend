@@ -1,5 +1,5 @@
 import express from 'express';
-import { initializeDatabase, pool } from './services/database.js';
+import { initializeDatabase, pool } from './dao/database.js';
 
 const port = Number.parseInt(process.env.PORT || '3000', 10);
 const app = express();

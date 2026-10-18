@@ -1,7 +1,8 @@
 services:
   pgvector:
     build:
-      context: ./docker/pgvector
+      context: .
+      dockerfile: Dockerfile.pgvector
     environment:
       POSTGRES_DB: naturalist
       POSTGRES_USER: postgres
