@@ -5,16 +5,17 @@ Node.js REST service backed by the official iNaturalist API.
 ## Requirements
 
 - Node.js 22 or later
-- Docker (optional)
+- Docker and Docker Compose
 
-## Run locally
+## Run with Docker
 
 ```sh
-npm install
-npm start
+docker compose up --build
 ```
 
-The service listens on port `3000` by default. Set `PORT` to change it. `INATURALIST_API_BASE_URL` can override the iNaturalist API base URL for development.
+This starts the REST backend on port `3000` and PostgreSQL with pgvector on port `5432`. PostgreSQL data persists in the `pgvector_data` Docker volume. The backend creates the `vector` extension and an `observations` table at startup. Set `PORT`, `DATABASE_URL`, or `INATURALIST_API_BASE_URL` in `.env` to override defaults.
+
+To run only the database container, use `docker compose up -d pgvector`.
 
 ## REST API
 
@@ -22,13 +23,6 @@ The service listens on port `3000` by default. Set `PORT` to change it. `INATURA
 curl http://localhost:3000/api/v1/health
 ```
 
-Returns service status, version, and timestamp.
+Returns service status, version, timestamp, and database connectivity.
 
-## Docker
-
-```sh
-docker build -t naturalist-indexer-backend .
-docker run --rm -p 3000:3000 naturalist-indexer-backend
-```
-
-Then open `http://localhost:3000/api/v1/health`.
+The `observations` table includes a pgvector `embedding` column. The embedding dimension and generation model have not been selected yet, so vector generation and a dimension-specific ANN index remain to be configured with the chosen model.

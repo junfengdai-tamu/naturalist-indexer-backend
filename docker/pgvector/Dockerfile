@@ -1,0 +1,3 @@
+FROM pgvector/pgvector:pg17
+
+EXPOSE 5432
