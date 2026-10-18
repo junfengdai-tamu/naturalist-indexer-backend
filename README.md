@@ -1,6 +1,6 @@
 # Naturalist Indexer Backend
 
-Node.js service with a REST health endpoint and a stateless MCP Streamable HTTP server. The MCP tool searches public observations through the official iNaturalist API.
+Node.js REST service backed by the official iNaturalist API.
 
 ## Requirements
 
@@ -22,16 +22,7 @@ The service listens on port `3000` by default. Set `PORT` to change it. `INATURA
 curl http://localhost:3000/api/v1/health
 ```
 
-Returns service status, version, timestamp, and the MCP endpoint path.
-
-## MCP Server
-
-Connect an MCP client using the Streamable HTTP endpoint `http://localhost:3000/mcp`.
-
-Tool: `search_inaturalist_observations`
-
-- `query` (string, required): search text such as a species name
-- `perPage` (integer, optional, 1–30, default 10): number of observations to return
+Returns service status, version, and timestamp.
 
 ## Docker
 
@@ -40,4 +31,4 @@ docker build -t naturalist-indexer-backend .
 docker run --rm -p 3000:3000 naturalist-indexer-backend
 ```
 
-Then open `http://localhost:3000/api/v1/health`; configure MCP clients with `http://localhost:3000/mcp`.
+Then open `http://localhost:3000/api/v1/health`.
