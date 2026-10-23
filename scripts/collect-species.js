@@ -5,7 +5,7 @@ import path from 'node:path';
 const INAT = 'https://api.inaturalist.org/v1';
 const GBIF = 'https://api.gbif.org/v1';
 const CACHE_DIR = 'data/raw';
-const OUT_FILE = 'data/passages.csv';
+const OUT_FILE = 'scripts/data/passages.csv';
 const MAX_PASSAGE_CHARS = 500;
 
 const MAX_PASSAGES_PER_SPECIES = 12;
@@ -161,6 +161,7 @@ function englishNames(taxon, gbifNames) {
 }
 
 await mkdir(CACHE_DIR, { recursive: true });
+await mkdir(path.dirname(OUT_FILE), { recursive: true });
 
 const placeId = await findTexasPlaceId();
 const counts = await fetchSpeciesCounts(placeId);

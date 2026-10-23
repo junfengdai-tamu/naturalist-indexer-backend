@@ -28,6 +28,9 @@ services:
     depends_on:
       pgvector:
         condition: service_healthy
+    volumes:
+      - model_cache:/home/node/.cache/huggingface/transformers
 
 volumes:
   pgvector_data:
+  model_cache:
