@@ -197,3 +197,27 @@ export async function generateMissingPassageEmbeddings(modelKey, batchSize = 32)
     console.log(`Generated ${embedded} ${model.id} embeddings`);
   }
 }
+
+export async function searchPassagesByEmbedding(embedding, modelId, dimensions) {
+  const vector = `[${embedding.join(',')}]`;
+  const { rows } = await pool.query(`
+    SELECT
+      p.passage_id,
+      p.taxon_id,
+      p.scientific_name,
+      p.common_name,
+      p.class,
+      p.family,
+      p.observation_count,
+      p.passage_index,
+      p.source,
+      p.text,
+      1 - (pe.embedding <=> $1::vector) AS similarity
+    FROM passage_embeddings AS pe
+    JOIN passages AS p ON p.passage_id = pe.passage_id
+    WHERE pe.model_id = $2 AND pe.dimensions = $3
+    ORDER BY pe.embedding <=> $1::vector
+    LIMIT 20
+  `, [vector, modelId, dimensions]);
+  return rows;
+}

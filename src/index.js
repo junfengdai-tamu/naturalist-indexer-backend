@@ -1,8 +1,10 @@
 import express from 'express';
 import { initializeDatabase, pool } from './dao/database.js';
+import { searchPassages } from './services/passage-search.js';
 
 const port = Number.parseInt(process.env.PORT || '3000', 10);
 const app = express();
+app.use(express.json({ limit: '16kb' }));
 
 app.get('/api/v1/health', async (_request, response) => {
   try {
@@ -21,6 +23,18 @@ app.get('/api/v1/health', async (_request, response) => {
       service: 'naturalist-indexer-backend',
       database: 'disconnected',
     });
+  }
+});
+
+app.post('/api/v1/passages/search', async (request, response) => {
+  try {
+    return response.json(await searchPassages(request.body?.query));
+  } catch (error) {
+    if (error.statusCode === 400) {
+      return response.status(error.statusCode).json({ error: error.message });
+    }
+    console.error('Passage search failed:', error);
+    return response.status(500).json({ error: 'Passage search failed' });
   }
 });
 
