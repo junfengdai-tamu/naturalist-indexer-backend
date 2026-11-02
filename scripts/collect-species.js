@@ -1,11 +1,13 @@
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const INAT = 'https://api.inaturalist.org/v1';
 const GBIF = 'https://api.gbif.org/v1';
-const CACHE_DIR = 'data/raw';
-const OUT_FILE = 'scripts/data/passages.csv';
+const DATA_DIR = fileURLToPath(new URL('./data/', import.meta.url));
+const CACHE_DIR = path.join(DATA_DIR, 'raw');
+const OUT_FILE = path.join(DATA_DIR, 'passages.csv');
 const MAX_PASSAGE_CHARS = 500;
 
 const MAX_PASSAGES_PER_SPECIES = 12;
@@ -175,10 +177,14 @@ const rows = [csvRow([
 ])];
 
 const minObservations = Number(process.env.MIN_OBSERVATIONS ?? 1);
+const seenNames = new Set();
 
 for (const { count, taxon: stub } of counts) {
   if (count < minObservations) continue;
   const taxon = taxa.get(stub.id) ?? stub;
+  // The same species can appear under several taxon ids; counts are sorted by count, so keep the first.
+  if (seenNames.has(taxon.name)) continue;
+  seenNames.add(taxon.name);
   const names = englishNames(taxon, await fetchGbifNames(taxon.name));
   const rank = (r) => (taxon.ancestors ?? []).find((a) => a.rank === r)?.name ?? '';
   const commonName = names[0] ?? '';
