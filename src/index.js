@@ -30,7 +30,7 @@ app.post('/api/v1/passages/search', async (request, response) => {
   try {
     return response.json(await searchPassages(request.body?.query));
   } catch (error) {
-    if (error.statusCode === 400) {
+    if (error.statusCode === 400 || error.statusCode === 503) {
       return response.status(error.statusCode).json({ error: error.message });
     }
     console.error('Passage search failed:', error);

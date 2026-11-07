@@ -1,5 +1,6 @@
 import { searchPassagesByEmbedding } from '../dao/database.js';
 import { getEmbeddingModel } from './embeddings.js';
+import { answerFromPassages } from './groq.js';
 
 const SEARCH_MODEL = 'minilm';
 const MAX_QUERY_LENGTH = 2000;
@@ -20,11 +21,6 @@ export async function searchPassages(query) {
   const model = await getEmbeddingModel(SEARCH_MODEL);
   const [embedding] = await model.embed([normalizedQuery]);
   const results = await searchPassagesByEmbedding(embedding, model.id, model.dimensions);
-
-  return {
-    query: normalizedQuery,
-    model: model.id,
-    count: results.length,
-    results,
-  };
+  const generated = await answerFromPassages(normalizedQuery, results);
+  return { answer: generated.answer };
 }
