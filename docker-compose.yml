@@ -2,11 +2,12 @@ services:
   pgvector:
     build:
       context: .
-      dockerfile: Dockerfile.pgvector
+      dockerfile: Dockerfile.paradedb
     environment:
       POSTGRES_DB: naturalist
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+    command: ["postgres", "-c", "shared_preload_libraries=pg_search"]
     ports:
       - "5432:5432"
     volumes:

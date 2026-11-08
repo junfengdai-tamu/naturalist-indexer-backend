@@ -1,6 +1,7 @@
 import express from 'express';
 import { initializeDatabase, pool } from './dao/database.js';
 import { searchPassages } from './services/passage-search.js';
+import { searchPassagesByBm25Query } from './services/bm25-passage-search.js';
 
 const port = Number.parseInt(process.env.PORT || '3000', 10);
 const app = express();
@@ -26,7 +27,7 @@ app.get('/api/v1/health', async (_request, response) => {
   }
 });
 
-app.post('/api/v1/passages/search', async (request, response) => {
+app.post('/api/v1/passages/search/embedding', async (request, response) => {
   try {
     return response.json(await searchPassages(request.body?.query));
   } catch (error) {
@@ -35,6 +36,20 @@ app.post('/api/v1/passages/search', async (request, response) => {
     }
     console.error('Passage search failed:', error);
     return response.status(500).json({ error: 'Passage search failed' });
+  }
+});
+
+app.post('/api/v1/passages/search/bm25', async (request, response) => {
+  try {
+    return response.json(await searchPassagesByBm25Query(request.body?.query));
+  } catch (error) {
+    if (error.statusCode === 400 || error.statusCode === 503) {
+      return response.status(error.statusCode).json({ error: error.message });
+    }
+    console.error('BM25 passage search failed:', error);
+    return response.status(error.statusCode || 500).json({
+      error: error.statusCode === 502 ? error.message : 'BM25 passage search failed',
+    });
   }
 });
 

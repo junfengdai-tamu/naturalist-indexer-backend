@@ -112,6 +112,7 @@ export const pool = new Pool({
 
 export async function initializeDatabase() {
   await pool.query('CREATE EXTENSION IF NOT EXISTS vector');
+  await pool.query('CREATE EXTENSION IF NOT EXISTS pg_search CASCADE');
   await pool.query(`
     CREATE TABLE IF NOT EXISTS passages (
       passage_id TEXT PRIMARY KEY,
@@ -124,6 +125,18 @@ export async function initializeDatabase() {
       passage_index INTEGER NOT NULL,
       source TEXT,
       text TEXT NOT NULL
+    )
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS passages_bm25_idx
+    ON passages
+    USING paradedb (
+      passage_id,
+      scientific_name,
+      common_name,
+      class,
+      family,
+      text
     )
   `);
   await pool.query(`
@@ -220,4 +233,31 @@ export async function searchPassagesByEmbedding(embedding, modelId, dimensions) 
     LIMIT 20
   `, [vector, modelId, dimensions]);
   return rows;
+}
+
+export async function searchPassagesByBm25(keywords) {
+  const query = keywords.join(' ');
+  const { rows } = await pool.query(`
+    SELECT
+      passage_id,
+      taxon_id,
+      scientific_name,
+      common_name,
+      class,
+      family,
+      observation_count,
+      passage_index,
+      source,
+      text,
+      pdb.score(passage_id) AS bm25_score
+    FROM passages
+    WHERE common_name      ||| $1
+       OR scientific_name ||| $1
+       OR class            ||| $1
+       OR family           ||| $1
+       OR text              ||| $1
+    ORDER BY pdb.score(passage_id) DESC, passage_id ASC
+    LIMIT 20
+  `, [query]);
+  return rows.map((row) => ({ ...row, bm25_score: Number(row.bm25_score) }));
 }

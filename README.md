@@ -33,12 +33,24 @@ curl http://localhost:3000/api/v1/health
 
 Returns service status, version, timestamp, and database connectivity.
 
-### Semantic passage search
+### BM25 passage search
 
-`POST /api/v1/passages/search` accepts a natural-language query, retrieves the top 20 matching passages, then asks Groq to re-rank them and generate a natural-language answer grounded in those passages. The response contains only the generated answer:
+`POST /api/v1/passages/search/bm25` extracts keywords with Groq, searches the indexed `common_name`, `scientific_name`, `class`, `family`, and `text` fields with ParadeDB BM25, and returns the top 20 passages with their scores.
 
 ```bash
-curl -X POST http://localhost:3000/api/v1/passages/search \
+curl -X POST http://localhost:3000/api/v1/passages/search/bm25 \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"Which Texas reptiles live near water?"}'
+```
+
+The response includes the extracted keywords and ranked passage records. Search uses disjunctive matching: a passage can match any keyword in any indexed text field, and BM25 orders the matches by relevance. The database container uses the ParadeDB PostgreSQL 17 image and creates its BM25 index during backend initialization.
+
+### Semantic passage search
+
+`POST /api/v1/passages/search/embedding` accepts a natural-language query, retrieves the top 20 matching passages by embedding similarity, then asks Groq to re-rank them and generate a natural-language answer grounded in those passages. The response contains only the generated answer:
+
+```bash
+curl -X POST http://localhost:3000/api/v1/passages/search/embedding \
   -H 'Content-Type: application/json' \
   -d '{"query":"Which Texas reptiles live near water?"}'
 ```
