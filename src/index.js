@@ -27,15 +27,22 @@ app.get('/api/v1/health', async (_request, response) => {
   }
 });
 
+const CLIENT_VISIBLE_STATUSES = new Set([400, 429, 502, 503]);
+
+function sendSearchError(response, error, failureMessage) {
+  if (CLIENT_VISIBLE_STATUSES.has(error.statusCode)) {
+    if (error.retryAfterSeconds) response.set('Retry-After', String(error.retryAfterSeconds));
+    return response.status(error.statusCode).json({ error: error.message });
+  }
+  console.error(`${failureMessage}:`, error);
+  return response.status(500).json({ error: failureMessage });
+}
+
 app.post('/api/v1/passages/search/embedding', async (request, response) => {
   try {
     return response.json(await searchPassages(request.body?.query));
   } catch (error) {
-    if (error.statusCode === 400 || error.statusCode === 503) {
-      return response.status(error.statusCode).json({ error: error.message });
-    }
-    console.error('Passage search failed:', error);
-    return response.status(500).json({ error: 'Passage search failed' });
+    return sendSearchError(response, error, 'Passage search failed');
   }
 });
 
@@ -43,13 +50,7 @@ app.post('/api/v1/passages/search/bm25', async (request, response) => {
   try {
     return response.json(await searchPassagesByBm25Query(request.body?.query));
   } catch (error) {
-    if (error.statusCode === 400 || error.statusCode === 503) {
-      return response.status(error.statusCode).json({ error: error.message });
-    }
-    console.error('BM25 passage search failed:', error);
-    return response.status(error.statusCode || 500).json({
-      error: error.statusCode === 502 ? error.message : 'BM25 passage search failed',
-    });
+    return sendSearchError(response, error, 'BM25 passage search failed');
   }
 });
 

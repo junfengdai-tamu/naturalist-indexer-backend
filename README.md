@@ -47,7 +47,7 @@ The response includes the extracted keywords and ranked passage records. Search 
 
 ### Semantic passage search
 
-`POST /api/v1/passages/search/embedding` accepts a natural-language query, retrieves the top 20 matching passages by embedding similarity, then asks Groq to re-rank them and generate a natural-language answer grounded in those passages. The response contains only the generated answer:
+`POST /api/v1/passages/search/embedding` accepts a natural-language query, retrieves the top 20 matching passages by embedding similarity, then asks Groq to re-rank them and generate a natural-language answer grounded in those passages. The response contains the generated answer plus the retrieved passages as `sources`, ordered by Groq's re-ranking (each with its metadata, text and cosine `similarity`), so answers can be checked against the passages they came from:
 
 ```bash
 curl -X POST http://localhost:3000/api/v1/passages/search/embedding \
@@ -56,10 +56,10 @@ curl -X POST http://localhost:3000/api/v1/passages/search/embedding \
 ```
 
 ```json
-{"answer":"..."}
+{"query":"...","model":"sentence-transformers/all-MiniLM-L6-v2","answer":"...","sources":[{"passage_id":"...","scientific_name":"...","text":"...","similarity":0.71}]}
 ```
 
-Set `GROQ_API_KEY` before starting the backend. The default model is `openai/gpt-oss-20b`; set `GROQ_MODEL` to override it. Without a key, this endpoint returns HTTP 503.
+Set `GROQ_API_KEY` before starting the backend. The default model is `openai/gpt-oss-20b`; set `GROQ_MODEL` to override it. Without a key, both Groq-backed endpoints return HTTP 503. If Groq rate-limits the request (HTTP 429 upstream), the backend retries briefly and otherwise returns HTTP 429 with a `Retry-After` header; other Groq failures return HTTP 502.
 
 The `passages` table stores `passage_id`, `taxon_id`, `scientific_name`, `common_name`, `class`, `family`, `observation_count`, `passage_index`, `source`, and `text`. The `passage_embeddings` table stores vectors with their model ID and dimension, so results from different models can be compared side by side. The CSV is committed, so you only need `npm run collect` to refresh the data. It queries the iNaturalist, GBIF and Wikipedia APIs (rate-limited, so a cold run takes a long time), caches responses in `scripts/data/raw/` and writes `scripts/data/passages.csv`. Import only happens while the table is empty, so after regenerating the CSV, reset the database volume (`docker compose down -v`) to load it. When the backend starts and the table is empty, it imports this CSV and computes MiniLM embeddings locally with Transformers.js. The model is downloaded on first use and cached.
 

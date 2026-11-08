@@ -1,14 +1,6 @@
-const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_MODEL = process.env.GROQ_MODEL || 'openai/gpt-oss-20b';
+import { groqError, groqJsonCompletion } from './groq-client.js';
 
 export async function answerFromPassages(query, passages) {
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) {
-    const error = new Error('GROQ_API_KEY is not configured');
-    error.statusCode = 503;
-    throw error;
-  }
-
   const context = passages.map((passage, index) => ({
     passage_id: passage.passage_id,
     scientific_name: passage.scientific_name,
@@ -29,57 +21,15 @@ export async function answerFromPassages(query, passages) {
     },
   ];
 
-  let response;
-  try {
-    response = await fetch(GROQ_API_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: GROQ_MODEL,
-        temperature: 0.2,
-        reasoning_effort: 'low',
-        reasoning_format: 'hidden',
-        max_completion_tokens: 2048,
-        response_format: { type: 'json_object' },
-        messages,
-      }),
-      signal: AbortSignal.timeout(30_000),
-    });
-  } catch (cause) {
-    const error = new Error('Could not reach Groq API', { cause });
-    error.statusCode = 502;
-    throw error;
+  const result = await groqJsonCompletion({ messages, temperature: 0.2, maxCompletionTokens: 2048 });
+  if (typeof result?.answer !== 'string' || !Array.isArray(result.ranked_passage_ids)) {
+    console.error('Groq response is missing answer or ranked_passage_ids');
+    throw groqError('Groq returned an invalid response', 502);
   }
-
-  if (!response.ok) {
-    const errorBody = await response.text();
-    console.error(`Groq API returned ${response.status}: ${errorBody}`);
-    const error = new Error('Groq API request failed');
-    error.statusCode = 502;
-    throw error;
-  }
-
-  let payload;
-  try {
-    payload = await response.json();
-    const content = payload.choices?.[0]?.message?.content;
-    const result = JSON.parse(content);
-    if (typeof result.answer !== 'string' || !Array.isArray(result.ranked_passage_ids)) {
-      throw new TypeError('Groq response is missing answer or ranked_passage_ids');
-    }
-    const availableIds = new Set(passages.map((passage) => String(passage.passage_id)));
-    return {
-      answer: result.answer,
-      rankedPassageIds: [...new Set(result.ranked_passage_ids.map(String))]
-        .filter((id) => availableIds.has(id)),
-    };
-  } catch (cause) {
-    console.error('Could not parse Groq response:', cause);
-    const error = new Error('Groq returned an invalid response');
-    error.statusCode = 502;
-    throw error;
-  }
+  const availableIds = new Set(passages.map((passage) => String(passage.passage_id)));
+  return {
+    answer: result.answer,
+    rankedPassageIds: [...new Set(result.ranked_passage_ids.map(String))]
+      .filter((id) => availableIds.has(id)),
+  };
 }

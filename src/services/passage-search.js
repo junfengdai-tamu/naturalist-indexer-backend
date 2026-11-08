@@ -22,5 +22,14 @@ export async function searchPassages(query) {
   const [embedding] = await model.embed([normalizedQuery]);
   const results = await searchPassagesByEmbedding(embedding, model.id, model.dimensions);
   const generated = await answerFromPassages(normalizedQuery, results);
-  return { answer: generated.answer };
+
+  // Sources are all retrieved passages, ordered by the model's re-ranking; any it omitted keep their similarity order.
+  const rankedIds = new Set(generated.rankedPassageIds);
+  const byId = new Map(results.map((passage) => [String(passage.passage_id), passage]));
+  const sources = [
+    ...generated.rankedPassageIds.map((id) => byId.get(id)),
+    ...results.filter((passage) => !rankedIds.has(String(passage.passage_id))),
+  ];
+
+  return { query: normalizedQuery, model: model.id, answer: generated.answer, sources };
 }
