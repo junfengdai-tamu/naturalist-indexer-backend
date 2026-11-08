@@ -33,21 +33,16 @@ curl http://localhost:3000/api/v1/health
 
 Returns service status, version, timestamp, and database connectivity.
 
-### BM25 passage search
+### Passage search
 
-`POST /api/v1/passages/search/bm25` extracts keywords with Groq, searches the indexed `common_name`, `scientific_name`, `class`, `family`, and `text` fields with ParadeDB BM25, and returns the top 20 passages with their scores.
+Two retrievers share one request and response contract, so their results can be compared directly:
 
-```bash
-curl -X POST http://localhost:3000/api/v1/passages/search/bm25 \
-  -H 'Content-Type: application/json' \
-  -d '{"query":"Which Texas reptiles live near water?"}'
-```
+| Endpoint | Retrieval | Score |
+|---|---|---|
+| `POST /api/v1/passages/search/bm25` | Groq extracts keywords from the query, then ParadeDB BM25 searches `common_name`, `scientific_name`, `class`, `family` and `text` (any keyword may match any field) | `bm25` |
+| `POST /api/v1/passages/search/embedding` | MiniLM embeds the query, then pgvector ranks passages by cosine similarity | `cosine_similarity` |
 
-The response includes the extracted keywords and ranked passage records. Search uses disjunctive matching: a passage can match any keyword in any indexed text field, and BM25 orders the matches by relevance. The database container uses the ParadeDB PostgreSQL 17 image and creates its BM25 index during backend initialization.
-
-### Semantic passage search
-
-`POST /api/v1/passages/search/embedding` accepts a natural-language query, retrieves the top 20 matching passages by embedding similarity, then asks Groq to re-rank them and generate a natural-language answer grounded in those passages. The response contains the generated answer plus the retrieved passages as `sources`, ordered by Groq's re-ranking (each with its metadata, text and cosine `similarity`), so answers can be checked against the passages they came from:
+Both retrieve the top 20 passages. The body is `{"query": "...", "generate": true}`; `generate` is optional and defaults to `true`.
 
 ```bash
 curl -X POST http://localhost:3000/api/v1/passages/search/embedding \
@@ -56,10 +51,23 @@ curl -X POST http://localhost:3000/api/v1/passages/search/embedding \
 ```
 
 ```json
-{"query":"...","model":"sentence-transformers/all-MiniLM-L6-v2","answer":"...","sources":[{"passage_id":"...","scientific_name":"...","text":"...","similarity":0.71}]}
+{
+  "query": "...",
+  "retriever": "embedding",
+  "score_type": "cosine_similarity",
+  "model": "sentence-transformers/all-MiniLM-L6-v2",
+  "answer": "...",
+  "sources": [{"passage_id": "...", "scientific_name": "...", "text": "...", "score": 0.71, "retrieval_rank": 3}]
+}
 ```
 
-Set `GROQ_API_KEY` before starting the backend. The default model is `openai/gpt-oss-20b`; set `GROQ_MODEL` to override it. Without a key, both Groq-backed endpoints return HTTP 503. If Groq rate-limits the request (HTTP 429 upstream), the backend retries briefly and otherwise returns HTTP 429 with a `Retry-After` header; other Groq failures return HTTP 502.
+BM25 responses have `"retriever": "bm25"` and a `keywords` array instead of `model`.
+
+- **`generate: true`** sends the 20 retrieved passages to Groq with the same prompt for both retrievers. Groq re-ranks them and writes an answer grounded in them. `sources` follows the re-ranked order, and each source keeps its `retrieval_rank` (its position before re-ranking) and its retriever `score`.
+- **`generate: false`** skips the answer and re-rank. `answer` is `null` and `sources` stays in raw retrieval order. This compares the retrievers on their own. The embedding endpoint then needs no Groq call at all; the BM25 endpoint still uses Groq for keyword extraction.
+- The prompt contains only passage text and rank, never scores, so BM25 and cosine scores do not influence the generated answer. `answer` is also `null` when nothing matched.
+
+Set `GROQ_API_KEY` before starting the backend. The default model is `openai/gpt-oss-20b`; set `GROQ_MODEL` to override it. Without a key, requests that need Groq return HTTP 503. If Groq rate-limits the request (HTTP 429 upstream), the backend retries briefly and otherwise returns HTTP 429 with a `Retry-After` header; other Groq failures return HTTP 502. The database container uses the ParadeDB PostgreSQL 17 image and creates its BM25 index during backend initialization.
 
 The `passages` table stores `passage_id`, `taxon_id`, `scientific_name`, `common_name`, `class`, `family`, `observation_count`, `passage_index`, `source`, and `text`. The `passage_embeddings` table stores vectors with their model ID and dimension, so results from different models can be compared side by side. The CSV is committed, so you only need `npm run collect` to refresh the data. It queries the iNaturalist, GBIF and Wikipedia APIs (rate-limited, so a cold run takes a long time), caches responses in `scripts/data/raw/` and writes `scripts/data/passages.csv`. Import only happens while the table is empty, so after regenerating the CSV, reset the database volume (`docker compose down -v`) to load it. When the backend starts and the table is empty, it imports this CSV and computes MiniLM embeddings locally with Transformers.js. The model is downloaded on first use and cached.
 

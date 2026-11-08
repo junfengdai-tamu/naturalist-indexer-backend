@@ -6,7 +6,6 @@ export async function answerFromPassages(query, passages) {
     scientific_name: passage.scientific_name,
     common_name: passage.common_name,
     text: passage.text,
-    similarity: passage.similarity,
     search_rank: index + 1,
   }));
 

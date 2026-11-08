@@ -1,6 +1,5 @@
 import { groqError, groqJsonCompletion } from './groq-client.js';
-
-const MAX_QUERY_LENGTH = 2000;
+import { normalizeQuery } from './search-response.js';
 
 function tokenize(value) {
   return value.toLocaleLowerCase().match(/[\p{L}\p{N}]+/gu) || [];
@@ -29,17 +28,8 @@ function usesOnlyQueryTerms(keywordTokens, queryTokens) {
   return true;
 }
 
-export async function extractKeywords(query) {
-  if (typeof query !== 'string' || query.trim().length === 0) {
-    const error = new TypeError('query must be a non-empty string');
-    error.statusCode = 400;
-    throw error;
-  }
-  if (query.length > MAX_QUERY_LENGTH) {
-    const error = new RangeError(`query must be ${MAX_QUERY_LENGTH} characters or fewer`);
-    error.statusCode = 400;
-    throw error;
-  }
+export async function extractKeywords(rawQuery) {
+  const query = normalizeQuery(rawQuery);
 
   const result = await groqJsonCompletion({
     temperature: 0,

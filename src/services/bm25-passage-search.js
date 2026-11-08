@@ -1,10 +1,21 @@
 import { searchPassagesByBm25 } from '../dao/database.js';
 import { extractKeywords } from './keyword-extraction.js';
+import { buildSearchResponse, normalizeQuery, parseGenerate } from './search-response.js';
 
-export async function searchPassagesByBm25Query(query) {
-  const { keywords } = await extractKeywords(query);
-  if (keywords.length === 0) return { query: query.trim(), keywords, results: [] };
+export async function searchPassagesByBm25Query(query, generate) {
+  const normalizedQuery = normalizeQuery(query);
+  const shouldGenerate = parseGenerate(generate);
 
-  const results = await searchPassagesByBm25(keywords);
-  return { query: query.trim(), keywords, results };
+  const { keywords } = await extractKeywords(normalizedQuery);
+  const rows = keywords.length === 0 ? [] : await searchPassagesByBm25(keywords);
+  const passages = rows.map(({ bm25_score, ...passage }) => ({ ...passage, score: bm25_score }));
+
+  return buildSearchResponse({
+    query: normalizedQuery,
+    retriever: 'bm25',
+    scoreType: 'bm25',
+    passages,
+    generate: shouldGenerate,
+    details: { keywords },
+  });
 }

@@ -1,35 +1,24 @@
 import { searchPassagesByEmbedding } from '../dao/database.js';
 import { getEmbeddingModel } from './embeddings.js';
-import { answerFromPassages } from './groq.js';
+import { buildSearchResponse, normalizeQuery, parseGenerate } from './search-response.js';
 
 const SEARCH_MODEL = 'minilm';
-const MAX_QUERY_LENGTH = 2000;
 
-export async function searchPassages(query) {
-  if (typeof query !== 'string' || query.trim().length === 0) {
-    const error = new TypeError('query must be a non-empty string');
-    error.statusCode = 400;
-    throw error;
-  }
-  if (query.length > MAX_QUERY_LENGTH) {
-    const error = new RangeError(`query must be ${MAX_QUERY_LENGTH} characters or fewer`);
-    error.statusCode = 400;
-    throw error;
-  }
+export async function searchPassages(query, generate) {
+  const normalizedQuery = normalizeQuery(query);
+  const shouldGenerate = parseGenerate(generate);
 
-  const normalizedQuery = query.trim();
   const model = await getEmbeddingModel(SEARCH_MODEL);
   const [embedding] = await model.embed([normalizedQuery]);
-  const results = await searchPassagesByEmbedding(embedding, model.id, model.dimensions);
-  const generated = await answerFromPassages(normalizedQuery, results);
+  const rows = await searchPassagesByEmbedding(embedding, model.id, model.dimensions);
+  const passages = rows.map(({ similarity, ...passage }) => ({ ...passage, score: similarity }));
 
-  // Sources are all retrieved passages, ordered by the model's re-ranking; any it omitted keep their similarity order.
-  const rankedIds = new Set(generated.rankedPassageIds);
-  const byId = new Map(results.map((passage) => [String(passage.passage_id), passage]));
-  const sources = [
-    ...generated.rankedPassageIds.map((id) => byId.get(id)),
-    ...results.filter((passage) => !rankedIds.has(String(passage.passage_id))),
-  ];
-
-  return { query: normalizedQuery, model: model.id, answer: generated.answer, sources };
+  return buildSearchResponse({
+    query: normalizedQuery,
+    retriever: 'embedding',
+    scoreType: 'cosine_similarity',
+    passages,
+    generate: shouldGenerate,
+    details: { model: model.id },
+  });
 }

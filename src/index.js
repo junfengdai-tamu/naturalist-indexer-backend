@@ -40,7 +40,7 @@ function sendSearchError(response, error, failureMessage) {
 
 app.post('/api/v1/passages/search/embedding', async (request, response) => {
   try {
-    return response.json(await searchPassages(request.body?.query));
+    return response.json(await searchPassages(request.body?.query, request.body?.generate));
   } catch (error) {
     return sendSearchError(response, error, 'Passage search failed');
   }
@@ -48,7 +48,7 @@ app.post('/api/v1/passages/search/embedding', async (request, response) => {
 
 app.post('/api/v1/passages/search/bm25', async (request, response) => {
   try {
-    return response.json(await searchPassagesByBm25Query(request.body?.query));
+    return response.json(await searchPassagesByBm25Query(request.body?.query, request.body?.generate));
   } catch (error) {
     return sendSearchError(response, error, 'BM25 passage search failed');
   }
