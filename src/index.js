@@ -1,7 +1,7 @@
 import express from 'express';
 import { initializeDatabase, pool } from './dao/database.js';
-import { searchPassages } from './services/passage-search.js';
-import { searchPassagesByBm25Query } from './services/bm25-passage-search.js';
+import { searchPassages } from './services/search/passage-search.js';
+import { searchPassagesByBm25Query } from './services/search/bm25-passage-search.js';
 
 const port = Number.parseInt(process.env.PORT || '3000', 10);
 const app = express();

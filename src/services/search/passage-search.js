@@ -1,6 +1,6 @@
-import { searchPassagesByEmbedding } from '../dao/database.js';
-import { getEmbeddingModel } from './embeddings.js';
-import { buildSearchResponse, normalizeQuery, parseGenerate } from './search-response.js';
+import { searchPassagesByEmbedding } from '../../dao/database.js';
+import { getEmbeddingModel } from '../util/embeddings.js';
+import { buildSearchResponse, normalizeQuery, parseGenerate } from '../util/search-response.js';
 
 const SEARCH_MODEL = 'minilm';
 

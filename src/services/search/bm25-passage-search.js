@@ -1,6 +1,6 @@
-import { searchPassagesByBm25 } from '../dao/database.js';
-import { extractKeywords } from './keyword-extraction.js';
-import { buildSearchResponse, normalizeQuery, parseGenerate } from './search-response.js';
+import { searchPassagesByBm25 } from '../../dao/database.js';
+import { extractKeywords } from '../util/keyword-extraction.js';
+import { buildSearchResponse, normalizeQuery, parseGenerate } from '../util/search-response.js';
 
 export async function searchPassagesByBm25Query(query, generate) {
   const normalizedQuery = normalizeQuery(query);

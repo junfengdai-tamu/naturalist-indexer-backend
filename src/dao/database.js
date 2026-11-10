@@ -1,7 +1,7 @@
 import pg from 'pg';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { getEmbeddingModel, listEmbeddingModels } from '../services/embeddings.js';
+import { getEmbeddingModel, listEmbeddingModels } from '../services/util/embeddings.js';
 
 const { Pool } = pg;
 const PASSAGES_CSV = fileURLToPath(new URL('../../scripts/data/passages.csv', import.meta.url));

@@ -1,4 +1,4 @@
-import { groqError, groqJsonCompletion } from './groq-client.js';
+import { groqError, groqJsonCompletion } from '../llm/groq-client.js';
 import { normalizeQuery } from './search-response.js';
 
 function tokenize(value) {
