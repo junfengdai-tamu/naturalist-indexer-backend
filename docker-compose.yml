@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.paradedb
+    command: ["postgres", "-c", "shared_preload_libraries=pg_search"]
     environment:
       POSTGRES_DB: naturalist
       POSTGRES_USER: postgres
