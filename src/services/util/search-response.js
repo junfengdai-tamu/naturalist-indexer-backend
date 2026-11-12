@@ -1,4 +1,4 @@
-import { groqJsonCompletion } from "../llm/groq-client.js";
+import { tamuError, tamuJsonCompletion } from "../llm/tamu-client.js";
 
 const MAX_QUERY_LENGTH = 2000;
 
@@ -65,10 +65,10 @@ async function answerFromPassages(query, passages) {
     },
   ];
 
-  const result = await groqJsonCompletion({ messages, temperature: 0.2, maxCompletionTokens: 2048 });
+  const result = await tamuJsonCompletion({ messages });
   if (typeof result?.answer !== 'string' || !Array.isArray(result.ranked_passage_ids)) {
-    console.error('Groq response is missing answer or ranked_passage_ids');
-    throw groqError('Groq returned an invalid response', 502);
+    console.error('TAMU AI response is missing answer or ranked_passage_ids');
+    throw tamuError('TAMU AI returned an invalid response', 502);
   }
   const availableIds = new Set(passages.map((passage) => String(passage.passage_id)));
   return {

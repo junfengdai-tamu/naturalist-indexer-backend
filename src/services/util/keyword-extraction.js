@@ -1,4 +1,4 @@
-import { groqError, groqJsonCompletion } from '../llm/groq-client.js';
+import { tamuError, tamuJsonCompletion } from '../llm/tamu-client.js';
 import { normalizeQuery } from './search-response.js';
 
 function tokenize(value) {
@@ -31,9 +31,7 @@ function usesOnlyQueryTerms(keywordTokens, queryTokens) {
 export async function extractKeywords(rawQuery) {
   const query = normalizeQuery(rawQuery);
 
-  const result = await groqJsonCompletion({
-    temperature: 0,
-    maxCompletionTokens: 512,
+  const result = await tamuJsonCompletion({
     messages: [
       {
         role: 'system',
@@ -46,8 +44,8 @@ export async function extractKeywords(rawQuery) {
     ],
   });
   if (!Array.isArray(result?.keywords) || result.keywords.some((keyword) => typeof keyword !== 'string')) {
-    console.error('Groq keyword response must contain a keywords array of strings');
-    throw groqError('Groq returned an invalid keyword response', 502);
+    console.error('TAMU AI keyword response must contain a keywords array of strings');
+    throw tamuError('TAMU AI returned an invalid keyword response', 502);
   }
 
   const seen = new Set();
